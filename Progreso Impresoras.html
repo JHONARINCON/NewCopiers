@@ -110,9 +110,12 @@
     }
   }
 </style>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
 <body>
-<img src="./newcopiers.jpg" alt="Imagen de encabezado" class="header-image" />
+<img src="./newCopiers/newcopiers.jpg" alt="Imagen de encabezado" class="header-image" />
 <h1>Seguimiento de Impresoras FORTA</h1>
 
 <div>
@@ -133,7 +136,21 @@
 </div>
 
 <script>
-  // Example list of printer names - replace or extend this list as needed
+  // Your Firebase configuration object here
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    databaseURL: "YOUR_DATABASE_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
   const printers = [
     '136 OPIADHU 97.4 RICOH',
     '146 DIMON    98.8 KIOCERA',
@@ -210,7 +227,10 @@
     checkbox.id = 'printer-' + index;
     checkbox.name = 'printers';
     checkbox.value = name;
-    checkbox.addEventListener('change', updateProgress);
+    checkbox.addEventListener('change', () => {
+      updateProgress();
+      saveProgressToFirebase();
+    });
 
     label.prepend(checkbox);
     return label;
@@ -220,12 +240,8 @@
     const checkboxes = document.querySelectorAll('input[name="printers"]');
     const total = checkboxes.length;
     let completedCount = 0;
-    const checkedPrinters = [];
     checkboxes.forEach(cb => {
-      if (cb.checked) {
-        completedCount++;
-        checkedPrinters.push(cb.value);
-      }
+      if (cb.checked) completedCount++;
     });
 
     const percent = total === 0 ? 0 : Math.round((completedCount / total) * 100);
@@ -237,31 +253,34 @@
     summaryText.textContent = remaining === 0
       ? '¡Completado! Todas las impresoras están listas.'
       : `Faltan ${remaining} impresora${remaining !== 1 ? 's' : ''} por completar.`;
+  }
 
-    // Save progress to localStorage
-    localStorage.setItem('printersProgress', JSON.stringify(checkedPrinters));
+  function saveProgressToFirebase() {
+    const checkboxes = document.querySelectorAll('input[name="printers"]');
+    const checkedPrinters = [];
+    checkboxes.forEach(cb => {
+      if (cb.checked) checkedPrinters.push(cb.value);
+    });
+    database.ref('printersProgress').set(checkedPrinters);
+  }
+
+  function loadProgressFromFirebase() {
+    database.ref('printersProgress').on('value', (snapshot) => {
+      const checkedPrinters = snapshot.val() || [];
+      const checkboxes = document.querySelectorAll('input[name="printers"]');
+      checkboxes.forEach(cb => {
+        cb.checked = checkedPrinters.includes(cb.value);
+      });
+      updateProgress();
+    });
   }
 
   function init() {
-    // Insert all printer checkboxes
     printers.forEach((printerName, idx) => {
       const checkboxElement = createPrinterCheckbox(printerName, idx);
       printersListContainer.appendChild(checkboxElement);
     });
-
-    // Load saved progress from localStorage
-    const savedProgress = localStorage.getItem('printersProgress');
-    if (savedProgress) {
-      const checkedPrinters = JSON.parse(savedProgress);
-      checkedPrinters.forEach(value => {
-        const checkbox = document.querySelector(`input[value="${value}"]`);
-        if (checkbox) {
-          checkbox.checked = true;
-        }
-      });
-    }
-
-    updateProgress();
+    loadProgressFromFirebase();
   }
 
   init();
