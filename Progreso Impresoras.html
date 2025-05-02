@@ -113,7 +113,7 @@
 </head>
 <body>
 <img src="./newcopiers.jpg" alt="Imagen de encabezado" class="header-image" />
-<h1>Seguimiento de Impresoras</h1>
+<h1>Seguimiento de Impresoras FORTA</h1>
 
 <div>
   <p>Marca las impresoras que ya estén completadas:</p>
@@ -220,8 +220,12 @@
     const checkboxes = document.querySelectorAll('input[name="printers"]');
     const total = checkboxes.length;
     let completedCount = 0;
+    const checkedPrinters = [];
     checkboxes.forEach(cb => {
-      if (cb.checked) completedCount++;
+      if (cb.checked) {
+        completedCount++;
+        checkedPrinters.push(cb.value);
+      }
     });
 
     const percent = total === 0 ? 0 : Math.round((completedCount / total) * 100);
@@ -233,6 +237,9 @@
     summaryText.textContent = remaining === 0
       ? '¡Completado! Todas las impresoras están listas.'
       : `Faltan ${remaining} impresora${remaining !== 1 ? 's' : ''} por completar.`;
+
+    // Save progress to localStorage
+    localStorage.setItem('printersProgress', JSON.stringify(checkedPrinters));
   }
 
   function init() {
@@ -241,6 +248,19 @@
       const checkboxElement = createPrinterCheckbox(printerName, idx);
       printersListContainer.appendChild(checkboxElement);
     });
+
+    // Load saved progress from localStorage
+    const savedProgress = localStorage.getItem('printersProgress');
+    if (savedProgress) {
+      const checkedPrinters = JSON.parse(savedProgress);
+      checkedPrinters.forEach(value => {
+        const checkbox = document.querySelector(`input[value="${value}"]`);
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+      });
+    }
+
     updateProgress();
   }
 
