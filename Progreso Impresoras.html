@@ -217,6 +217,8 @@
   const progressBar = document.getElementById('progressBar');
   const summaryText = document.getElementById('summaryText');
 
+  let isUpdatingFromFirebase = false;
+
   function createPrinterCheckbox(name, index) {
     const label = document.createElement('label');
     label.setAttribute('for', 'printer-' + index);
@@ -228,6 +230,7 @@
     checkbox.name = 'printers';
     checkbox.value = name;
     checkbox.addEventListener('change', () => {
+      if (isUpdatingFromFirebase) return;
       updateProgress();
       saveProgressToFirebase();
     });
@@ -268,9 +271,11 @@
     database.ref('printersProgress').on('value', (snapshot) => {
       const checkedPrinters = snapshot.val() || [];
       const checkboxes = document.querySelectorAll('input[name="printers"]');
+      isUpdatingFromFirebase = true;
       checkboxes.forEach(cb => {
         cb.checked = checkedPrinters.includes(cb.value);
       });
+      isUpdatingFromFirebase = false;
       updateProgress();
     });
   }
